@@ -23,14 +23,14 @@ def get_init_len(init):
     return init_len
 
 
-
 class BeerGame(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, n_agents=4, n_turns_per_game=100,test_mode=False):
+    def __init__(self, n_agents=4, n_turns_per_game=10, test_mode=False):
         super().__init__()
         c = Config()
         config, unparsed = c.get_config()
         self.config = config
+        print("AgentType:", config.agentTypes)
         self.test_mode = test_mode
         if self.test_mode:
             self.test_demand_pool = TestDemand()
@@ -80,8 +80,8 @@ class BeerGame(gym.Env):
             oob.append(x[ii])
         self.observation_space = gym.spaces.Tuple(tuple([spaces.MultiDiscrete(oob)] * 4))
 
-        print("Observation space:")
-        print(self.observation_space)
+        # print("Observation space:")
+        # print(self.observation_space)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -90,9 +90,8 @@ class BeerGame(gym.Env):
     def createAgent(self):
       agentTypes = self.config.agentTypes
       return [Agent(i,self.config.ILInit[i], self.config.AOInit, self.config.ASInit[i],
-                                self.config.c_h[i], self.config.c_p[i], self.config.eta[i],
-                                agentTypes[i],self.config) for i in range(self.config.NoAgent)]
-
+                        self.config.c_h[i], self.config.c_p[i], self.config.eta[i],
+                        agentTypes[i],self.config) for i in range(self.config.NoAgent)]
 
     def resetGame(self, demand, ):
         self.demand = demand
@@ -119,7 +118,6 @@ class BeerGame(gym.Env):
 
         # update OO when there are initial IL,AO,AS
         self.update_OO()
-
 
     def reset(self):
         if self.test_mode:
@@ -173,17 +171,16 @@ class BeerGame(gym.Env):
         obs_array = np.array([np.array(row) for row in obs])
         return obs_array  # observations #self._get_observations()
 
-
     def step(self, action:list):
         if get_init_len(action) != self.n_agents:
             raise error.InvalidAction(f'Length of action array must be same as n_agents({self.n_agents})')
         if any(np.array(action) < 0):
             raise error.InvalidAction(f"You can't order negative amount. You agents actions are: {action}")
 
-        self.handleAction(action)
+        self.handleAction()
         self.next()
 
-        self.orders = action
+        self.orders = action # record action
 
         for i in range(self.n_agents):
             self.players[i].getReward()
@@ -193,7 +190,6 @@ class BeerGame(gym.Env):
             self.done = [True] * 4
         else:
             self.done = [False] * 4
-
 
         # get current observation, prepend to deque
         for i in range(self.n_agents):
@@ -220,38 +216,20 @@ class BeerGame(gym.Env):
         state = obs_array #observations #self._get_observations()
         return state, self.rewards, self.done, {}
 
-
-
-    def handleAction(self, action):
+    def handleAction(self):
         # get random lead time
         leadTime = random.randint(self.config.leadRecOrderLow[0], self.config.leadRecOrderUp[0])
         self.cur_demand = self.demand[self.curTime]
         # set AO
-        BS = False
         self.players[0].AO[self.curTime] += self.demand[self.curTime]       #orders from customer, add directly to the retailer arriving order
         for k in range(0, self.config.NoAgent):
-            if k >= 0:  #recording action
-                self.players[k].action = np.zeros(5)        #one-hot transformation
-                self.players[k].action[action[k]] = 1
-                BS = False
-            else:
-                raise NotImplementedError
-                self.getAction(k)
-                BS = True
-
             # updates OO and AO at time t+1
-            self.players[k].OO += self.players[k].actionValue(self.curTime, self.playType, BS = BS)     #open order level update
+            self.players[k].OO += self.players[k].actionValue(self.curTime, self.playType)     #open order level update
             leadTime = random.randint(self.config.leadRecOrderLow[k], self.config.leadRecOrderUp[k])        #order
             if self.players[k].agentNum < self.config.NoAgent-1:
-                if k>=0:
-                    self.players[k + 1].AO[self.curTime + leadTime] += self.players[k].actionValue(self.curTime,
-                                                                                                   self.playType,
-                                                                                                   BS=False)  # TODO(yan): k+1 arrived order contains my own order and the order i received from k-1
-                else:
-                    raise NotImplementedError
-                    self.players[k + 1].AO[self.curTime + leadTime] += self.players[k].actionValue(self.curTime,
-                                                                                                   self.playType,
-                                                                                                   BS=True)  # open order level update
+                self.players[k + 1].AO[self.curTime + leadTime] += self.players[k].actionValue(self.curTime, self.playType)  
+                # k+1 arrived order contains my own order and the order i received from k-1
+        # print("Curent action is", action)
 
     def next(self):
         # get a random leadtime for shipment
@@ -259,8 +237,8 @@ class BeerGame(gym.Env):
                                     self.config.leadRecItemUp[self.config.NoAgent - 1])
 
         # handle the most upstream recieved shipment
-        self.players[self.config.NoAgent-1].AS[self.curTime + leadTimeIn] += self.players[self.config.NoAgent-1].actionValue(self.curTime, self.playType, BS=True)
-                                                                #the manufacture gets its ordered beer after leadtime
+        self.players[self.config.NoAgent-1].AS[self.curTime + leadTimeIn] += self.players[self.config.NoAgent-1].actionValue(self.curTime, self.playType)
+        #the manufacture gets its ordered beer after leadtime
 
         self.shipments = []
         for k in range(self.config.NoAgent-1,-1,-1): # [3,2,1,0]
@@ -299,25 +277,19 @@ class BeerGame(gym.Env):
 
         self.curTime += 1
 
-    def getAction(self, k):
-        self.players[k].action = np.zeros(self.config.actionListLenOpt)
-
-        if self.config.demandDistribution == 2:
-            if self.curTime and self.config.use_initial_BS <= 4:
-                self.players[k].action[np.argmin(np.abs(np.array(self.config.actionListOpt) - \
-                                                        max(0, (self.players[k].int_bslBaseStock - (
-                                                                    self.players[k].IL + self.players[k].OO -
-                                                                    self.players[k].AO[self.curTime])))))] = 1
-            else:
-                self.players[k].action[np.argmin(np.abs(np.array(self.config.actionListOpt) - \
-                                                        max(0, (self.players[k].bsBaseStock - (
-                                                                    self.players[k].IL + self.players[k].OO -
-                                                                    self.players[k].AO[self.curTime])))))] = 1
-        else:
-            self.players[k].action[np.argmin(np.abs(np.array(self.config.actionListOpt) - \
-                                                    max(0, (self.players[k].bsBaseStock - (
-                                                                self.players[k].IL + self.players[k].OO -
-                                                                self.players[k].AO[self.curTime])))))] = 1
+    def getAction(self):
+        for k in range(self.config.NoAgent):
+            if  self.players[k].compType == "dqn":
+                self.players[k].action = self.players[k].brain.getDNNAction(self.playType)
+                assert self.players[k].action < self.config.actionListLen
+            elif self.players[k].compType == "bs":    
+                if self.config.demandDistribution == 2 and self.curTime and self.config.use_initial_BS:
+                    self.players[k].action = np.argmin(np.abs(np.array(self.config.actionListOpt)- max(0,(self.players[k].int_bslBaseStock - (self.players[k].IL + self.players[k].OO - self.players[k].AO[self.curTime]))) ))   
+                else:
+                    self.players[k].action = np.argmin(np.abs(np.array(self.config.actionListOpt)-max(0,(self.players[k].bsBaseStock - (self.players[k].IL + self.players[k].OO - self.players[k].AO[self.curTime]))) )) 
+            else: # not a valid player is defined.
+                raise Exception('The player type is not defined or it is not a valid type.!')
+        return tuple([self.players[k].action for k in range(self.config.NoAgent)])
 
     def getTotRew(self):
       totRew = 0
@@ -327,7 +299,6 @@ class BeerGame(gym.Env):
 
       for i in range(self.config.NoAgent):
         self.players[i].curReward += self.players[i].eta*(totRew - self.players[i].cumReward) #/(self.T)
-
 
     def planHorizon(self):
       # TLow: minimum number for the planning horizon # TUp: maximum number for the planning horizon
@@ -408,7 +379,7 @@ class BeerGame(gym.Env):
         print('Turn:     ', self.curTime)
         stocks = [p.IL for p in self.players]
         print('Stocks:   ', ", ".join([str(x) for x in stocks]))
-        print('Orders:   ', self.orders)
+        print('Actions:   ', self.orders)
         print('Shipments:', self.shipments)
         print('Rewards:', self.rewards)
         print('Customer demand: ', self.cur_demand)
@@ -430,18 +401,19 @@ class BeerGame(gym.Env):
         # print('Last stockout cost:', self.stockout_cost)
 
 
-
 if __name__ == "__main__":
     env = BeerGame()
     obs = env.reset()
     env.render()
     done = False
-
     while not done:
-        rnd_action = env.action_space.sample()
-        next_obs, reward, done_list, _ = env.step(rnd_action)
+        action = env.getAction()
+        next_obs, reward, done_list, _ = env.step(action)
+        # train
+        for k in range(env.config.NoAgent):					
+            if env.players[k].compTypeTrain == "dqn":
+                env.players[k].brain.train(next_obs[k], action[k], reward[k], done_list[k])
         done = all(done_list)
+        # cumReward = [env.players[i].cumReward for i in range(env.config.NoAgent)]
         env.render()
-
-
-    print(1)
+    print("Game Over")
