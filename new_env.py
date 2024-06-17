@@ -25,7 +25,7 @@ def get_init_len(init):
 
 class BeerGame(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, n_agents=4, n_turns_per_game=10, test_mode=False):
+    def __init__(self, n_agents=4, n_turns_per_game=100, test_mode=False):
         super().__init__()
         c = Config()
         config, unparsed = c.get_config()
@@ -93,13 +93,16 @@ class BeerGame(gym.Env):
                         self.config.c_h[i], self.config.c_p[i], self.config.eta[i],
                         agentTypes[i],self.config) for i in range(self.config.NoAgent)]
 
-    def resetGame(self, demand, ):
+    def resetGame(self, demand, playType):
         self.demand = demand
-        self.playType='test'
+        self.playType=playType
         self.curTime = 0
-        self.curGame += 1
-        self.totIterPlayed += self.T
-        self.T = self.planHorizon()         #now fixed
+        if playType == "train":
+            self.curGame += 1
+            self.totIterPlayed += self.T
+            self.T = self.planHorizon()	
+        else:
+            self.T = self.config.Ttest	
         self.totalReward = 0
 
         self.deques = []
@@ -119,7 +122,7 @@ class BeerGame(gym.Env):
         # update OO when there are initial IL,AO,AS
         self.update_OO()
 
-    def reset(self):
+    def reset(self, playType="train"):
         if self.test_mode:
             demand = self.test_demand_pool.next()
             if not self.test_demand_pool:           #if run out of testing data
@@ -127,7 +130,7 @@ class BeerGame(gym.Env):
         else:
             demand = [random.randint(0,2) for _ in range(102)]
 
-        self.resetGame(demand)
+        self.resetGame(demand, playType)
         observations = [None] * self.n_agents
 
         self.deques = []
@@ -400,20 +403,3 @@ class BeerGame(gym.Env):
         # print('Last holding cost: ', self.holding_cost)
         # print('Last stockout cost:', self.stockout_cost)
 
-
-if __name__ == "__main__":
-    env = BeerGame()
-    obs = env.reset()
-    env.render()
-    done = False
-    while not done:
-        action = env.getAction()
-        next_obs, reward, done_list, _ = env.step(action)
-        # train
-        for k in range(env.config.NoAgent):					
-            if env.players[k].compTypeTrain == "dqn":
-                env.players[k].brain.train(next_obs[k], action[k], reward[k], done_list[k])
-        done = all(done_list)
-        # cumReward = [env.players[i].cumReward for i in range(env.config.NoAgent)]
-        env.render()
-    print("Game Over")
