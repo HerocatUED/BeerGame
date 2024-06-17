@@ -324,8 +324,8 @@ class Agent(object):
             
             self.compType = compuType 
             if self.compType == 'dqn':
-                  self.brain = DQNAgent(state_size=50, action_size=5, history=self.config.multPerdInpt)
-                  self.brain.set_init_state() # sets the initial input of the network
+                  self.brain = DQNAgent(state_size=50, action_size=5)
+                  # self.brain.set_init_state() # sets the initial input of the network
 
       # reset player information
       def resetPlayer(self, T):
@@ -346,8 +346,8 @@ class Agent(object):
             self.curObservation = self.getCurState(1)  # this function gets the current state of the game
             self.nextObservation = []
             self.totalR = 0
-            if self.compType == 'dqn':
-                  self.brain.set_init_state() # sets the initial input of the network
+            # if self.compType == 'dqn':
+            #       self.brain.set_init_state() # sets the initial input of the network
 
       # updates the IL and OO at time t, after recieving "rec" number of items
       def recieveItems(self, time):
