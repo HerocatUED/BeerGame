@@ -30,7 +30,6 @@ class BeerGame(gym.Env):
         c = Config()
         config, unparsed = c.get_config()
         self.config = config
-        print("AgentType:", config.agentTypes)
         self.test_mode = test_mode
         if self.test_mode:
             self.test_demand_pool = TestDemand()

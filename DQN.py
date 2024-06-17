@@ -20,11 +20,11 @@ class DQNetwork(nn.Module):
 
 class DQNAgent:
     def __init__(self, state_size, action_size,  
-                 hidden_size=64, gamma=0.99, lr=0.001, 
-                 batch_size=64, epsilon=0.1, history=1,
+                 hidden_size=256, gamma=0.99, lr=0.001, 
+                 batch_size=64, epsilon=0.05, history=1,
                  memory_size=1000):
         
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.state_size = state_size
         self.action_size = action_size
@@ -52,24 +52,17 @@ class DQNAgent:
         self.memory.append((state, action, reward, next_state, done))
         if len(self.memory) >= self.memory_size:
             self.memory.pop(0)
-
-    # def getDNNAction(self, state, epsilon=0.1):
-    #     if random.random() < epsilon:
-    #         return random.randint(0, self.action_size)
-    #     with torch.no_grad():
-    #         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-    #         return torch.argmax(self.policy_net(state_tensor)).item()
     
     def getDNNAction(self, playType):        
         if playType == "train":
             if (random.random() <= self.epsilon) or (len(self.memory) < self.history):
                 action = random.randrange(self.action_size)
             else:
-                state = torch.tensor(self.state, dtype=torch.float32).unsqueeze(0).to(self.device)
+                state = torch.tensor(self.state, dtype=torch.float32).unsqueeze(0)
                 with torch.no_grad():
                     action = torch.argmax(self.policy_net(state)).item()
         elif playType == "test":
-            state = torch.tensor(self.state, dtype=torch.float32).unsqueeze(0).to(self.device)
+            state = torch.tensor(self.state, dtype=torch.float32).unsqueeze(0)
             with torch.no_grad():
                 action = torch.argmax(self.policy_net(state)).item()
         return action
