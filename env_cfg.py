@@ -355,13 +355,9 @@ class Agent(object):
             self.OO = self.OO - self.AS[time]  # invertory in transient update
 
       # find action Value associated with the action list
-      def actionValue(self, curTime, playType):
+      def actionValue(self, curTime):
             """
             return the action value (the order)
-            :param curTime:
-            :param playType: train or test
-            :param BS: whether to consider arrived orders
-            :return:
             """
             # print(BS)
             if self.compType == "dqn": 
