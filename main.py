@@ -77,4 +77,3 @@ if __name__ == "__main__":
     model_path = f'logs/{exp}/model.pth'
     main(log_dir, model_path, exp)
     
-# TODO: current state
