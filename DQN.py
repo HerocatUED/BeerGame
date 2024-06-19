@@ -12,18 +12,18 @@ class DQNetwork(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, output_size)
+        # self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        # x = F.relu(self.fc2(x))
+        return self.fc2(x)
 
 class DQNAgent:
     def __init__(self, state_size, action_size,  
-                 hidden_size=128, gamma=0.98, lr=0.001, 
-                 batch_size=32, epsilon=0.1, min_size=1000,
+                 hidden_size=64, gamma=0.98, lr=0.001, 
+                 batch_size=64, epsilon=0.2, min_size=1000,
                  memory_size=10000, update_iter=10):
         
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

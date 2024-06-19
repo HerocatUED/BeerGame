@@ -31,8 +31,7 @@ class BeerGame(gym.Env):
         config, unparsed = c.get_config()
         self.config = config
         self.test_mode = test_mode
-        if self.test_mode:
-            self.test_demand_pool = TestDemand()
+        self.test_demand_pool = TestDemand()
 
         self.curGame = 1 # The number associated with the current game (counter of the game)
         self.curTime = 0

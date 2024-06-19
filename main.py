@@ -31,15 +31,15 @@ def train_step(env: BeerGame):
   
 
 def train(log_dir: str, model_path: str, env: BeerGame, episode_max: int = 1000):
-    max_reword = 0
+    max_reword =  - 10
     # train
     summary_writer = SummaryWriter(log_dir=log_dir)
     for i in tqdm(range(episode_max)):
         reward = train_step(env)
         for k in range(env.config.NoAgent):
             summary_writer.add_scalar(f"train_reward_agent{k}", reward[k], i+1)
-        # test every 10 episode
-        if (i + 1) % 10 == 0:
+        # test every 20 episode
+        if (i + 1) % 20 == 0:
             test_reward = test(env)
             for k in range(env.config.NoAgent):
                 summary_writer.add_scalar(f"avg_test_reward_agent{k}", test_reward[k], i+1)
@@ -67,7 +67,7 @@ def test(env: BeerGame):
     return reward_avg / 50
 
 
-def main(log_dir: str, model_path: str, agent: int, episode_max: int = 1000):
+def main(log_dir: str, model_path: str, agent: int, episode_max: int = 3000):
     # initialize
     seed_everything(0)
     env = BeerGame(n_turns_per_game=100, test_mode=False)
@@ -79,7 +79,7 @@ def main(log_dir: str, model_path: str, agent: int, episode_max: int = 1000):
 
 
 if __name__ == "__main__":
-    exp = 1
+    exp = -1
     # for exp in range(1, 5):
     log_dir = f'logs/{exp}'
     model_path = f'logs/{exp}/model.pth'
