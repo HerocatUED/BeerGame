@@ -361,7 +361,7 @@ class Agent(object):
             """
             # print(BS)
             if self.compType == "dqn": 
-                  actionList = [-2, -1, 0, 1, 2]
+                  actionList = np.arange(0, 5, 1) # [-2, -1, 0, 1, 2]
                   a = max(0, actionList[self.action] * self.config.action_step + self.AO[curTime])
             else: # the action value is fixed to be positive
                   actionList = np.arange(0, 61, 1) 

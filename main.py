@@ -37,12 +37,12 @@ def train(log_dir: str, model_path: str, env: BeerGame, episode_max: int = 1000)
     for i in tqdm(range(episode_max)):
         reward = train_step(env)
         for k in range(env.config.NoAgent):
-            summary_writer.add_scalar(f"train_reward_agent{k}", reward[k], i+1)
+            summary_writer.add_scalar(f"train_reward_agent{k}", env.players[k].cumReward, i+1)
         # test every 20 episode
         if (i + 1) % 20 == 0:
             test_reward = test(env)
             for k in range(env.config.NoAgent):
-                summary_writer.add_scalar(f"avg_test_reward_agent{k}", test_reward[k], i+1)
+                summary_writer.add_scalar(f"avg_test_reward_agent{k}", env.players[k].cumReward, i+1)
                 if env.players[k].compType == "dqn" and test_reward[k] > max_reword:
                     max_reword = test_reward[k]
                     env.players[k].brain.save(model_path)
@@ -67,7 +67,7 @@ def test(env: BeerGame):
     return reward_avg / 50
 
 
-def main(log_dir: str, model_path: str, agent: int, episode_max: int = 3000):
+def main(log_dir: str, model_path: str, agent: int, episode_max: int = 1000):
     # initialize
     seed_everything(0)
     env = BeerGame(n_turns_per_game=100, test_mode=False)
@@ -79,9 +79,9 @@ def main(log_dir: str, model_path: str, agent: int, episode_max: int = 3000):
 
 
 if __name__ == "__main__":
-    exp = -1
+    exp = 1
     # for exp in range(1, 5):
-    log_dir = f'logs/{exp}'
+    log_dir = f'logs/{exp}-dim128-bs64-lr0.001'
     model_path = f'logs/{exp}/model.pth'
     main(log_dir, model_path, exp)
     
