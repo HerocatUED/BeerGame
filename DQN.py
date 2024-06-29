@@ -22,9 +22,9 @@ class DQNetwork(nn.Module):
 
 class DQNAgent:
     def __init__(self, state_size, action_size,  
-                 hidden_size=128, gamma=0.98, lr=0.001, 
-                 batch_size=64, epsilon=0.1, min_size=1000,
-                 memory_size=10000, update_iter=100):
+                 hidden_size=64, gamma=0.98, lr=0.001, 
+                 batch_size=64, epsilon=0.005, min_size=1000,
+                 memory_size=10000, update_iter=500):
         
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
@@ -47,7 +47,7 @@ class DQNAgent:
         self.target_net.eval()
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
-        self.lr_schedule = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=45000, gamma=0.1)
+        self.lr_schedule = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=100000, gamma=0.5)
         self.iteration = 1
         self.update_iter = update_iter
 
@@ -96,6 +96,7 @@ class DQNAgent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.lr_schedule.step()
         self.iteration += 1
         if self.iteration % self.update_iter == 0:
             self.update_target_network()

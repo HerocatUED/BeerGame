@@ -25,10 +25,8 @@ def get_init_len(init):
 
 class BeerGame(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, n_agents=4, n_turns_per_game=100, test_mode=False):
+    def __init__(self, n_agents=4, n_turns_per_game=100, test_mode=False, config=None):
         super().__init__()
-        c = Config()
-        config, unparsed = c.get_config()
         self.config = config
         self.test_mode = test_mode
         self.test_demand_pool = TestDemand()

@@ -202,9 +202,6 @@ class Config(object):
             if config.gameConfig == 1:
                   config.agentTypes = ["bs", "bs","bs","bs"]
             elif config.gameConfig == 2:   
-                  # all agents are run by DNN.
-                  # load-model loads from brain-3+agentNum-
-                  # Also, multi-agent with double target uses this gameConfig.
                   config.agentTypes = ["dqn", "dqn","dqn","dqn"]
                   config.to_prev_ai = [3,-1,-1,-1]
             elif config.gameConfig == 3: 
