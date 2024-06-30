@@ -25,15 +25,11 @@ def get_init_len(init):
 
 class BeerGame(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, n_agents=4, n_turns_per_game=10, test_mode=False):
+    def __init__(self, n_agents=4, n_turns_per_game=100, test_mode=False, config=None):
         super().__init__()
-        c = Config()
-        config, unparsed = c.get_config()
         self.config = config
-        print("AgentType:", config.agentTypes)
         self.test_mode = test_mode
-        if self.test_mode:
-            self.test_demand_pool = TestDemand()
+        self.test_demand_pool = TestDemand()
 
         self.curGame = 1 # The number associated with the current game (counter of the game)
         self.curTime = 0
@@ -93,13 +89,16 @@ class BeerGame(gym.Env):
                         self.config.c_h[i], self.config.c_p[i], self.config.eta[i],
                         agentTypes[i],self.config) for i in range(self.config.NoAgent)]
 
-    def resetGame(self, demand, ):
+    def resetGame(self, demand, playType):
         self.demand = demand
-        self.playType='test'
+        self.playType = playType
         self.curTime = 0
-        self.curGame += 1
-        self.totIterPlayed += self.T
-        self.T = self.planHorizon()         #now fixed
+        if playType == "train":
+            self.curGame += 1
+            self.totIterPlayed += self.T
+            self.T = self.planHorizon()	
+        else:
+            self.T = self.config.Ttest	
         self.totalReward = 0
 
         self.deques = []
@@ -119,15 +118,15 @@ class BeerGame(gym.Env):
         # update OO when there are initial IL,AO,AS
         self.update_OO()
 
-    def reset(self):
+    def reset(self, playType="train"):
         if self.test_mode:
             demand = self.test_demand_pool.next()
-            if not self.test_demand_pool:           #if run out of testing data
+            if len(self.test_demand_pool.test_deq) == 0:           #if run out of testing data
                 self.test_demand_pool = TestDemand()
         else:
             demand = [random.randint(0,2) for _ in range(102)]
 
-        self.resetGame(demand)
+        self.resetGame(demand, playType)
         observations = [None] * self.n_agents
 
         self.deques = []
@@ -224,10 +223,10 @@ class BeerGame(gym.Env):
         self.players[0].AO[self.curTime] += self.demand[self.curTime]       #orders from customer, add directly to the retailer arriving order
         for k in range(0, self.config.NoAgent):
             # updates OO and AO at time t+1
-            self.players[k].OO += self.players[k].actionValue(self.curTime, self.playType)     #open order level update
+            self.players[k].OO += self.players[k].actionValue(self.curTime)     #open order level update
             leadTime = random.randint(self.config.leadRecOrderLow[k], self.config.leadRecOrderUp[k])        #order
             if self.players[k].agentNum < self.config.NoAgent-1:
-                self.players[k + 1].AO[self.curTime + leadTime] += self.players[k].actionValue(self.curTime, self.playType)  
+                self.players[k + 1].AO[self.curTime + leadTime] += self.players[k].actionValue(self.curTime)  
                 # k+1 arrived order contains my own order and the order i received from k-1
         # print("Curent action is", action)
 
@@ -237,7 +236,7 @@ class BeerGame(gym.Env):
                                     self.config.leadRecItemUp[self.config.NoAgent - 1])
 
         # handle the most upstream recieved shipment
-        self.players[self.config.NoAgent-1].AS[self.curTime + leadTimeIn] += self.players[self.config.NoAgent-1].actionValue(self.curTime, self.playType)
+        self.players[self.config.NoAgent-1].AS[self.curTime + leadTimeIn] += self.players[self.config.NoAgent-1].actionValue(self.curTime)
         #the manufacture gets its ordered beer after leadtime
 
         self.shipments = []
@@ -400,20 +399,3 @@ class BeerGame(gym.Env):
         # print('Last holding cost: ', self.holding_cost)
         # print('Last stockout cost:', self.stockout_cost)
 
-
-if __name__ == "__main__":
-    env = BeerGame()
-    obs = env.reset()
-    env.render()
-    done = False
-    while not done:
-        action = env.getAction()
-        next_obs, reward, done_list, _ = env.step(action)
-        # train
-        for k in range(env.config.NoAgent):					
-            if env.players[k].compTypeTrain == "dqn":
-                env.players[k].brain.train(next_obs[k], action[k], reward[k], done_list[k])
-        done = all(done_list)
-        # cumReward = [env.players[i].cumReward for i in range(env.config.NoAgent)]
-        env.render()
-    print("Game Over")

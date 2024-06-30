@@ -60,7 +60,7 @@ class Config(object):
             game_arg.add_argument('--betta_b4', type=float, default=-0.2, help='beta of Sterman formula parameter for player 4')
             game_arg.add_argument('--eta', type=list, default=[0,4,4,4], help='the total cost regulazer')
             game_arg.add_argument('--distCoeff', type=int, default=20, help='the total cost regulazer')
-            game_arg.add_argument('--gameConfig', type=int, default=1, help='if it is "0", it uses the current "agentType", otherwise sets agent types according to the function setAgentType() in this file.')
+            game_arg.add_argument('--gameConfig', type=int, default=3, help='if it is "0", it uses the current "agentType", otherwise sets agent types according to the function setAgentType() in this file.')
             game_arg.add_argument('--ifUseTotalReward', type=str2bool, default='False', help='if you want to have the total rewards in the experience replay, set it to true.')
             game_arg.add_argument('--ifUsedistTotReward', type=str2bool, default='True', help='If use correction to the rewards in the experience replay for all iterations of current game')
             game_arg.add_argument('--ifUseASAO', type=str2bool, default='True', help='if use AS and AO, i.e., received shipment and received orders in the input of DNN')
@@ -137,7 +137,7 @@ class Config(object):
             DQN_arg.add_argument('--display', type=int, default=1000, help='the number of iterations between two display of results.')
             DQN_arg.add_argument('--momentum', type=float, default=0.9, help='the momentum value')
             DQN_arg.add_argument('--dnnUpCnt', type=int, default=10000, help='the number of iterations that updates the dqn weights')
-            DQN_arg.add_argument('--multPerdInpt', type=int, default=10, help='Number of history records which we feed into DNN')
+            DQN_arg.add_argument('--multPerdInpt', type=int, default=1, help='Number of history records which we feed into DNN')
 
 
             ####################	Utilities			####################	
@@ -202,9 +202,6 @@ class Config(object):
             if config.gameConfig == 1:
                   config.agentTypes = ["bs", "bs","bs","bs"]
             elif config.gameConfig == 2:   
-                  # all agents are run by DNN.
-                  # load-model loads from brain-3+agentNum-
-                  # Also, multi-agent with double target uses this gameConfig.
                   config.agentTypes = ["dqn", "dqn","dqn","dqn"]
                   config.to_prev_ai = [3,-1,-1,-1]
             elif config.gameConfig == 3: 
@@ -324,8 +321,8 @@ class Agent(object):
             
             self.compType = compuType 
             if self.compType == 'dqn':
-                  self.brain = DQNAgent(state_size=self.config.multPerdInpt * 5, action_size=5)
-                  self.brain.set_init_state(self.curState, self.config.multPerdInpt) # sets the initial input of the network
+                  self.brain = DQNAgent(state_size=50, action_size=5)
+                  # self.brain.set_init_state() # sets the initial input of the network
 
       # reset player information
       def resetPlayer(self, T):
@@ -346,8 +343,8 @@ class Agent(object):
             self.curObservation = self.getCurState(1)  # this function gets the current state of the game
             self.nextObservation = []
             self.totalR = 0
-            if self.compType == 'dqn':
-                  self.brain.set_init_state(self.curObservation, self.config.multPerdInpt) # sets the initial input of the network
+            # if self.compType == 'dqn':
+            #       self.brain.set_init_state() # sets the initial input of the network
 
       # updates the IL and OO at time t, after recieving "rec" number of items
       def recieveItems(self, time):
@@ -355,17 +352,13 @@ class Agent(object):
             self.OO = self.OO - self.AS[time]  # invertory in transient update
 
       # find action Value associated with the action list
-      def actionValue(self, curTime, playType):
+      def actionValue(self, curTime):
             """
             return the action value (the order)
-            :param curTime:
-            :param playType: train or test
-            :param BS: whether to consider arrived orders
-            :return:
             """
             # print(BS)
             if self.compType == "dqn": 
-                  actionList = [-2, -1, 0, 1, 2]
+                  actionList = np.arange(0, 5, 1) # [-2, -1, 0, 1, 2]
                   a = max(0, actionList[self.action] * self.config.action_step + self.AO[curTime])
             else: # the action value is fixed to be positive
                   actionList = np.arange(0, 61, 1) 

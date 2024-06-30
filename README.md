@@ -1,6 +1,6 @@
-# Beer Game demo
-Beer Game implemented as an OpenAI Gym environment.
-
+# Beer Game
+- Course project of MultiAgent Learning（PKU 2024 Spring）
+- Beer Game implemented as an OpenAI Gym environment.
 
 ![roles.png](docs%2Froles.png)
 
