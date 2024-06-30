@@ -38,18 +38,22 @@ def train(log_dir: str, model_path: str, env: BeerGame, episode_max: int = 1000)
         for k in range(env.config.NoAgent):
             summary_writer.add_scalar(f"train_reward_agent{k}", env.players[k].cumReward, i+1)
         # test every 20 episode
-        # if (i + 1) % 20 == 0:
-        #     test(env)
-        #     for k in range(env.config.NoAgent):
-        #         summary_writer.add_scalar(f"avg_test_reward_agent{k}", env.players[k].cumReward, i+1)
-        #         if env.players[k].compType == "dqn" and env.players[k].cumReward > max_reword:
-        #             max_reword = env.players[k].cumReward
-        #             env.players[k].brain.save(model_path)
+        if (i + 1) % 20 == 0:
+            test(env)
+            for k in range(env.config.NoAgent):
+                summary_writer.add_scalar(f"avg_test_reward_agent{k}", env.players[k].cumReward, i+1)
+                if env.players[k].compType == "dqn" and env.players[k].cumReward > max_reword:
+                    max_reword = env.players[k].cumReward
+                    env.players[k].brain.save(model_path)
+                    print("New best model saved.")
+    # Final Print
+    test(env)
     summary_writer.close()
       
     
 def test(env: BeerGame):
     env.test_mode = True
+    actions = [[], [], [], []]
     # iterate over 50 test games
     for i in range(50):
         obs = env.reset(playType="test")
@@ -61,6 +65,16 @@ def test(env: BeerGame):
             action = env.getAction()
             next_obs, reward, done_list, _ = env.step(action)
             done = all(done_list)
+            for k in range(env.config.NoAgent):	
+                act = action[k]
+                if env.players[k].compType == "dqn":
+                    act += env.players[k].AO[env.curTime]
+                actions[k].append(act)
+
+    actions = np.array(actions)
+    for k in range(env.config.NoAgent):
+        acts, count = np.unique(actions[k], return_counts=True)
+        print(f"Agent {k} test actions: {acts}, counts: {count}")
 
 
 def main(log_dir: str, model_path: str, agent: int, episode_max: int = 1000):
@@ -76,11 +90,11 @@ def main(log_dir: str, model_path: str, agent: int, episode_max: int = 1000):
 
 
 if __name__ == "__main__":
-    # exp = -1
+    exp = 1
     # label = 'BaseStock'
-    label = 'dim64-bs64-eps0.05-long-fc3'
-    for exp in range(2, 5):
-        log_dir = f'logs/{exp}-{label}'
-        model_path = f'logs/{exp}-{label}/model.pth'
-        main(log_dir, model_path, exp, 3000)
+    label = 'dim64-bs64-eps0.001-long-fc3'
+    # for exp in range(0, 5):
+    log_dir = f'logs/tmp/{exp}-{label}'
+    model_path = f'logs/tmp/{exp}-{label}/model.pth'
+    main(log_dir, model_path, exp, 3000)
     

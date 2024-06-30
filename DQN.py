@@ -23,7 +23,7 @@ class DQNetwork(nn.Module):
 class DQNAgent:
     def __init__(self, state_size, action_size,  
                  hidden_size=64, gamma=0.98, lr=0.001, 
-                 batch_size=64, epsilon=0.005, min_size=1000,
+                 batch_size=64, epsilon=0.001, min_size=1000,
                  memory_size=10000, update_iter=500):
         
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -33,7 +33,8 @@ class DQNAgent:
         self.hidden_size = hidden_size
         self.gamma = gamma
         self.batch_size = batch_size
-        self.epsilon = epsilon
+        self.epsilon = 1.0
+        self.epsilon_min = epsilon
 
         # memory pool: (state, action, reward, next_state, done)
         self.memory = []
@@ -98,6 +99,8 @@ class DQNAgent:
         self.optimizer.step()
         self.lr_schedule.step()
         self.iteration += 1
+        self.epsilon -= 0.001
+        self.epsilon = max(self.epsilon, self.epsilon_min)
         if self.iteration % self.update_iter == 0:
             self.update_target_network()
 
